@@ -103,8 +103,9 @@ contract ParallelToken {
     function split(uint256 _id, uint256[] calldata splitAmount) public returns (uint256[] memory newId) {
         TokenData memory tokenToSplit = idToTokenData[_id];
         require(tokenToSplit.owner == msg.sender);
+        uint256 originalAmount = tokenToSplit.amount;
         delete idToTokenData[_id];
-        emit Burn(_id, msg.sender, idToTokenData[_id].amount);
+        emit Burn(_id, msg.sender, originalAmount);
         uint256 length = splitAmount.length;
         newId = new uint256[](length);
         uint256 accumlator;
@@ -121,6 +122,7 @@ contract ParallelToken {
             nonce += 1;
         }
         require(accumlator == tokenToSplit.amount);
+        nonces[msg.sender] = nonce;
     }
 
     function _push(uint256 _id, address _to, bytes memory _memo) private {

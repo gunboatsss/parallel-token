@@ -1,13 +1,14 @@
-## Foundry
+## ParallelToken
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A reimagine of fungible token API. This took inspriation from ERC-6909 and Sui's `Coin`.
 
-Foundry consists of:
+### Thesis
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+L2 is going to need to specialized than just running EVM. They will do parallelized EVM (seen in Polygon, Monad, Sei and soon Rise chain) and reprice the gas to incenitvize parallel execution. This implementation try to make it non-blocking by making UTXO-style coin. If those did not come to happen then it's ERC-20 but with memo transfer.
+
+#### No callback
+
+This design took the learning from ERC-721 and ERC-1155 that callback on EVM SUCKS. In the year of lord 2026, you should be using wei-roll or have wallet that support ERC-6357 by any mean. And if any wallet software implementation doesn't support it, we should shame them! (looking at you, Trezor). As an vibe-coded example, there is Uniswap V2 implementation that use ParallelToken implementation instead of ERC-20.
 
 ## Documentation
 
