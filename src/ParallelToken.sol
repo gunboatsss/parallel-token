@@ -73,6 +73,7 @@ contract ParallelToken {
         uint256 length = _id.length;
         require(length > 0);
         TokenData memory firstToken = idToTokenData[_id[0]];
+        require(firstToken.owner == msg.sender);
         address underlying = firstToken.underlyingERC20;
         redeemed = firstToken.amount;
         delete idToTokenData[_id[0]];
