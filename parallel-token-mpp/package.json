@@ -1,0 +1,40 @@
+{
+  "name": "@parallel-token/mpp",
+  "version": "0.1.0",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "src"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client/index.d.ts",
+      "default": "./dist/client/index.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server/index.js"
+    }
+  },
+  "peerDependencies": {
+    "mppx": ">=0.3.15",
+    "viem": ">=2"
+  },
+  "peerDependenciesMeta": {
+    "mppx": {
+      "optional": false
+    },
+    "viem": {
+      "optional": false
+    }
+  },
+  "dependencies": {
+    "mppx": "^0.4.8"
+  },
+  "devDependencies": {
+    "mppx": "^0.4.8",
+    "viem": "^2.47.5"
+  }
+}

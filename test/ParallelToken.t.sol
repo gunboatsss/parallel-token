@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.33;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console} from "forge-std/Test.sol";
 import {ParallelToken} from "src/ParallelToken.sol";
+import {IParallelToken} from "src/interfaces/IParallelToken.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 contract TokenA is ERC20 {
@@ -208,6 +209,45 @@ contract ParallelTokenTest is Test {
         vm.stopPrank();
     }
 
+    function test_push_with_memo() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 1e18);
+        uint256 id = pt.mint(address(tokenA), 1e18);
+        vm.expectEmit(address(pt));
+        emit IParallelToken.Transfer(adam, adam, bob, id, "hello memo");
+        pt.push(id, bob, "hello memo");
+        (, address owner,) = pt.idToTokenData(id);
+        assertEq(owner, bob);
+        vm.stopPrank();
+    }
+
+    function test_pushMany_with_memos() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 3e18);
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 1e18;
+        amounts[1] = 2e18;
+        uint256[] memory ids = pt.mintMany(address(tokenA), amounts);
+
+        address[] memory tos = new address[](2);
+        tos[0] = bob;
+        tos[1] = adam;
+
+        bytes[] memory memos = new bytes[](2);
+        memos[0] = "memo for bob";
+        memos[1] = "memo for adam";
+
+        vm.expectEmit(address(pt));
+        emit IParallelToken.Transfer(adam, adam, bob, ids[0], "memo for bob");
+        pt.pushMany(ids, tos, memos);
+
+        (, address owner0,) = pt.idToTokenData(ids[0]);
+        (, address owner1,) = pt.idToTokenData(ids[1]);
+        assertEq(owner0, bob);
+        assertEq(owner1, adam);
+        vm.stopPrank();
+    }
+
     function test_pull() public {
         vm.startPrank(adam);
         tokenA.approve(address(pt), 1e18);
@@ -285,7 +325,11 @@ contract ParallelTokenTest is Test {
         address[] memory tos = new address[](2);
         tos[0] = bob;
         tos[1] = bob;
-        pt.pullMany(ids, tos, "");
+
+        bytes[] memory memos = new bytes[](2);
+        memos[0] = "abc";
+        memos[1] = "def";
+        pt.pullMany(ids, tos, memos);
 
         (, address owner0,) = pt.idToTokenData(ids[0]);
         (, address owner1,) = pt.idToTokenData(ids[1]);
@@ -406,6 +450,95 @@ contract ParallelTokenTest is Test {
         pt.setOperator(bob, false);
 
         assertTrue(!pt.isOperator(adam, bob));
+        vm.stopPrank();
+    }
+
+    function test_mint_reverts_zero_address() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 1e18);
+        vm.expectRevert(IParallelToken.ZeroAddress.selector);
+        pt.mint(address(0), 1e18);
+        vm.stopPrank();
+    }
+
+    function test_mint_reverts_zero_amount() public {
+        vm.startPrank(adam);
+        vm.expectRevert(IParallelToken.ZeroAmount.selector);
+        pt.mint(address(tokenA), 0);
+        vm.stopPrank();
+    }
+
+    function test_merge_reverts_invalid_merge() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 2e18);
+        uint256[] memory amounts = new uint256[](2);
+        amounts[0] = 1e18;
+        amounts[1] = 1e18;
+        uint256[] memory ids = pt.mintMany(address(tokenA), amounts);
+        vm.expectRevert(IParallelToken.InvalidMerge.selector);
+        uint256[] memory mergeIds = new uint256[](1);
+        mergeIds[0] = ids[0];
+        pt.merge(mergeIds, ids[0]);
+        vm.stopPrank();
+    }
+
+    function test_merge_reverts_mixed_underlying() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 1e18);
+        tokenB.approve(address(pt), 1e18);
+        uint256 idA = pt.mint(address(tokenA), 1e18);
+        uint256 idB = pt.mint(address(tokenB), 1e18);
+        vm.expectRevert();
+        uint256[] memory mergeIds = new uint256[](1);
+        mergeIds[0] = idA;
+        pt.merge(mergeIds, idB);
+        vm.stopPrank();
+    }
+
+    function test_merge_reverts_zero_length() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 1e18);
+        uint256 id = pt.mint(address(tokenA), 1e18);
+        uint256[] memory mergeIds = new uint256[](0);
+        vm.expectRevert(IParallelToken.ZeroLength.selector);
+        pt.merge(mergeIds, id);
+        vm.stopPrank();
+    }
+
+    function test_split_reverts_zero_length() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 1e18);
+        uint256 id = pt.mint(address(tokenA), 1e18);
+        uint256[] memory splitAmounts = new uint256[](0);
+        vm.expectRevert(IParallelToken.ZeroLength.selector);
+        pt.split(id, splitAmounts);
+        vm.stopPrank();
+    }
+
+    function test_split_reverts_zero_amount_in_array() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 1e18);
+        uint256 id = pt.mint(address(tokenA), 1e18);
+        uint256[] memory splitAmounts = new uint256[](2);
+        splitAmounts[0] = 5e17;
+        splitAmounts[1] = 0;
+        vm.expectRevert();
+        pt.split(id, splitAmounts);
+        vm.stopPrank();
+    }
+
+function test_split_reverts_not_owner() public {
+        vm.startPrank(adam);
+        tokenA.approve(address(pt), 1e18);
+        uint256 id = pt.mint(address(tokenA), 1e18);
+        vm.stopPrank();
+
+        vm.startPrank(bob);
+        uint256[] memory splitAmounts = new uint256[](2);
+        splitAmounts[0] = 4e17;
+        splitAmounts[1] = 6e17;
+        vm.expectRevert();
+        pt.split(id, splitAmounts);
         vm.stopPrank();
     }
 }
