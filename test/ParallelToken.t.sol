@@ -527,7 +527,7 @@ contract ParallelTokenTest is Test {
         vm.stopPrank();
     }
 
-function test_split_reverts_not_owner() public {
+    function test_split_reverts_not_owner() public {
         vm.startPrank(adam);
         tokenA.approve(address(pt), 1e18);
         uint256 id = pt.mint(address(tokenA), 1e18);

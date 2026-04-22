@@ -8,10 +8,8 @@ contract ParallelToken is IParallelToken {
     mapping(uint256 id => TokenData) public idToTokenData;
     mapping(address => uint256) public nonces;
 
-    mapping(address owner => mapping(address spender => mapping(uint256 id => bool)))
-        public allowance;
-    mapping(address owner => mapping(address operator => bool))
-        public isOperator;
+    mapping(address owner => mapping(address spender => mapping(uint256 id => bool))) public allowance;
+    mapping(address owner => mapping(address operator => bool)) public isOperator;
 
     function FREE_PALESTINE13879338958() public pure returns (bool) {
         return true;
