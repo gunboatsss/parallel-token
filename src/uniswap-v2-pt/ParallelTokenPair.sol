@@ -139,7 +139,7 @@ contract ParallelTokenPair is UniswapV2ERC20 {
 
         for (uint256 i; i < length; i++) {
             uint256 id = ids[i];
-            (address tokenUnderlying, , uint256 tokenAmount) = pt.tokenData(id);
+            (address tokenUnderlying,, uint256 tokenAmount) = pt.tokenData(id);
 
             if (tokenUnderlying == token0) {
                 amount0 += tokenAmount;
@@ -193,7 +193,7 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         newIds = new uint256[](2);
 
         if (amount0 > 0 && position0Id != 0) {
-            (, , uint256 positionAmount0) = pt.tokenData(position0Id);
+            (,, uint256 positionAmount0) = pt.tokenData(position0Id);
             require(positionAmount0 >= amount0, "ParallelTokenPair: INSUFFICIENT_BALANCE");
             uint256 remainder = positionAmount0 - amount0;
             if (remainder == 0) {
@@ -212,7 +212,7 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         }
 
         if (amount1 > 0 && position1Id != 0) {
-            (, , uint256 positionAmount1) = pt.tokenData(position1Id);
+            (,, uint256 positionAmount1) = pt.tokenData(position1Id);
             require(positionAmount1 >= amount1, "ParallelTokenPair: INSUFFICIENT_BALANCE");
             uint256 remainder = positionAmount1 - amount1;
             if (remainder == 0) {
@@ -250,7 +250,7 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         uint256 amount1In;
 
         if (amount0Out > 0) {
-            (, , uint256 swapAmount1) = pt.tokenData(position1Id);
+            (,, uint256 swapAmount1) = pt.tokenData(position1Id);
             require(swapAmount1 >= amount0Out, "ParallelTokenPair: INSUFFICIENT_BALANCE");
             uint256[] memory splitAmounts = new uint256[](2);
             splitAmounts[0] = amount0Out;
@@ -262,7 +262,7 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         }
 
         if (amount1Out > 0) {
-            (, , uint256 swapAmount0) = pt.tokenData(position0Id);
+            (,, uint256 swapAmount0) = pt.tokenData(position0Id);
             require(swapAmount0 >= amount1Out, "ParallelTokenPair: INSUFFICIENT_BALANCE");
             uint256[] memory splitAmounts = new uint256[](2);
             splitAmounts[0] = amount1Out;
@@ -278,10 +278,10 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         uint256 balance0After;
         uint256 balance1After;
         if (position0Id != 0) {
-            (, , balance0After) = pt.tokenData(position0Id);
+            (,, balance0After) = pt.tokenData(position0Id);
         }
         if (position1Id != 0) {
-            (, , balance1After) = pt.tokenData(position1Id);
+            (,, balance1After) = pt.tokenData(position1Id);
         }
 
         uint256 balance0Adjusted = balance0After * 1000 - amount0In * 3;
