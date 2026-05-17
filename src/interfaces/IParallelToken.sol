@@ -25,8 +25,12 @@ interface IParallelToken {
     error InvalidLength();
     error Unauthorized();
 
+    function tokenData(uint256 id) external view returns (address underlyingERC20, address owner, uint256 amount);
+
     function nonces(address owner) external view returns (uint256);
+
     function allowance(address owner, address spender, uint256 id) external view returns (bool);
+
     function isOperator(address owner, address operator) external view returns (bool);
 
     function mint(address _underlying, uint256 _amount) external returns (uint256 newId);

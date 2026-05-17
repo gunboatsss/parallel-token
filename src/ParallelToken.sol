@@ -5,17 +5,35 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IParallelToken} from "./interfaces/IParallelToken.sol";
 
 contract ParallelToken is IParallelToken {
-    mapping(uint256 id => TokenData) public idToTokenData;
+    mapping(uint256 id => TokenData) private idToTokenData;
     mapping(address => uint256) public nonces;
 
-    mapping(address owner => mapping(address spender => mapping(uint256 id => bool))) public allowance;
-    mapping(address owner => mapping(address operator => bool)) public isOperator;
+    mapping(address owner => mapping(address spender => mapping(uint256 id => bool)))
+        public allowance;
+    mapping(address owner => mapping(address operator => bool))
+        public isOperator;
 
     function FREE_PALESTINE13879338958() public pure returns (bool) {
         return true;
     }
 
-    function mint(address _underlying, uint256 _amount) public returns (uint256 newId) {
+    function tokenData(
+        uint256 id
+    )
+        external
+        view
+        returns (address underlyingERC20, address owner, uint256 amount)
+    {
+        TokenData memory currentToken = idToTokenData[id];
+        underlyingERC20 = currentToken.underlyingERC20;
+        owner = currentToken.owner;
+        amount = currentToken.amount;
+    }
+
+    function mint(
+        address _underlying,
+        uint256 _amount
+    ) public returns (uint256 newId) {
         if (_amount == 0) {
             revert ZeroAmount();
         }
@@ -29,13 +47,25 @@ contract ParallelToken is IParallelToken {
             revert Collusion();
         }
 
-        idToTokenData[newId] = TokenData({underlyingERC20: _underlying, owner: msg.sender, amount: _amount});
+        idToTokenData[newId] = TokenData({
+            underlyingERC20: _underlying,
+            owner: msg.sender,
+            amount: _amount
+        });
         nonces[msg.sender] = nonce;
         emit Mint(newId, msg.sender, _amount);
-        SafeTransferLib.safeTransferFrom(_underlying, msg.sender, address(this), _amount);
+        SafeTransferLib.safeTransferFrom(
+            _underlying,
+            msg.sender,
+            address(this),
+            _amount
+        );
     }
 
-    function mintMany(address _underlying, uint256[] calldata _amount) public returns (uint256[] memory newId) {
+    function mintMany(
+        address _underlying,
+        uint256[] calldata _amount
+    ) public returns (uint256[] memory newId) {
         uint256 length = _amount.length;
         if (length == 0) {
             revert ZeroLength();
@@ -47,18 +77,28 @@ contract ParallelToken is IParallelToken {
             uint256 currentAmount = _amount[i];
             require(currentAmount > 0);
             totalDebit += currentAmount;
-            uint256 newCurrentId = uint256(keccak256(abi.encode(msg.sender, nonce)));
+            uint256 newCurrentId = uint256(
+                keccak256(abi.encode(msg.sender, nonce))
+            );
             if (idToTokenData[newCurrentId].owner != address(0)) {
                 revert Collusion();
             }
-            idToTokenData[newCurrentId] =
-                TokenData({underlyingERC20: _underlying, owner: msg.sender, amount: currentAmount});
+            idToTokenData[newCurrentId] = TokenData({
+                underlyingERC20: _underlying,
+                owner: msg.sender,
+                amount: currentAmount
+            });
             newId[i] = newCurrentId;
             emit Mint(newCurrentId, msg.sender, currentAmount);
             nonce += 1;
         }
         nonces[msg.sender] = nonce;
-        SafeTransferLib.safeTransferFrom(_underlying, msg.sender, address(this), totalDebit);
+        SafeTransferLib.safeTransferFrom(
+            _underlying,
+            msg.sender,
+            address(this),
+            totalDebit
+        );
     }
 
     function burn(uint256 _id) public returns (uint256 redeemed) {
@@ -72,7 +112,9 @@ contract ParallelToken is IParallelToken {
         SafeTransferLib.safeTransfer(underlyingToken, msg.sender, redeemed);
     }
 
-    function burnMany(uint256[] calldata _id) public returns (uint256 redeemed) {
+    function burnMany(
+        uint256[] calldata _id
+    ) public returns (uint256 redeemed) {
         uint256 length = _id.length;
         require(length > 0);
         TokenData memory firstToken = idToTokenData[_id[0]];
@@ -116,8 +158,14 @@ contract ParallelToken is IParallelToken {
             if (currentToken.owner != msg.sender) {
                 revert NotAOwner();
             }
-            if (currentToken.underlyingERC20 != idToTokenData[_to].underlyingERC20) {
-                revert MixedAddress(currentToken.underlyingERC20, idToTokenData[_to].underlyingERC20);
+            if (
+                currentToken.underlyingERC20 !=
+                idToTokenData[_to].underlyingERC20
+            ) {
+                revert MixedAddress(
+                    currentToken.underlyingERC20,
+                    idToTokenData[_to].underlyingERC20
+                );
             }
             accumulator += currentToken.amount;
             delete idToTokenData[_id[i]];
@@ -128,7 +176,10 @@ contract ParallelToken is IParallelToken {
         return true;
     }
 
-    function split(uint256 _id, uint256[] calldata splitAmount) public returns (uint256[] memory newId) {
+    function split(
+        uint256 _id,
+        uint256[] calldata splitAmount
+    ) public returns (uint256[] memory newId) {
         TokenData memory tokenToSplit = idToTokenData[_id];
         require(tokenToSplit.owner == msg.sender);
         uint256 originalAmount = tokenToSplit.amount;
@@ -144,12 +195,17 @@ contract ParallelToken is IParallelToken {
         for (uint256 i; i < length; i++) {
             require(splitAmount[i] > 0);
             accumulator += splitAmount[i];
-            uint256 newCurrentId = uint256(keccak256(abi.encode(msg.sender, nonce)));
+            uint256 newCurrentId = uint256(
+                keccak256(abi.encode(msg.sender, nonce))
+            );
             if (idToTokenData[newCurrentId].owner != address(0)) {
                 revert Collusion();
             }
-            idToTokenData[newCurrentId] =
-                TokenData({underlyingERC20: tokenToSplit.underlyingERC20, owner: msg.sender, amount: splitAmount[i]});
+            idToTokenData[newCurrentId] = TokenData({
+                underlyingERC20: tokenToSplit.underlyingERC20,
+                owner: msg.sender,
+                amount: splitAmount[i]
+            });
             newId[i] = newCurrentId;
             emit Mint(newCurrentId, msg.sender, splitAmount[i]);
             nonce += 1;
@@ -170,12 +226,19 @@ contract ParallelToken is IParallelToken {
         return true;
     }
 
-    function push(uint256 _id, address _to, bytes calldata _memo) public returns (bool) {
+    function push(
+        uint256 _id,
+        address _to,
+        bytes calldata _memo
+    ) public returns (bool) {
         _push(_id, _to, _memo);
         return true;
     }
 
-    function pushMany(uint256[] calldata _id, address[] calldata _to) public returns (bool) {
+    function pushMany(
+        uint256[] calldata _id,
+        address[] calldata _to
+    ) public returns (bool) {
         uint256 length = _id.length;
         require(length == _to.length);
         for (uint256 i; i < length; i++) {
@@ -184,7 +247,11 @@ contract ParallelToken is IParallelToken {
         return true;
     }
 
-    function pushMany(uint256[] calldata _id, address[] calldata _to, bytes[] calldata _memo) public returns (bool) {
+    function pushMany(
+        uint256[] calldata _id,
+        address[] calldata _to,
+        bytes[] calldata _memo
+    ) public returns (bool) {
         uint256 length = _id.length;
         if (length == 0) {
             revert ZeroLength();
@@ -198,12 +265,20 @@ contract ParallelToken is IParallelToken {
         return true;
     }
 
-    function pull(uint256 _id, address _to, bytes calldata _memo) public returns (bool) {
+    function pull(
+        uint256 _id,
+        address _to,
+        bytes calldata _memo
+    ) public returns (bool) {
         address from = idToTokenData[_id].owner;
         if (_to == address(0)) {
             revert ZeroAddress();
         }
-        if (from != msg.sender && !isOperator[from][msg.sender] && !allowance[from][msg.sender][_id]) {
+        if (
+            from != msg.sender &&
+            !isOperator[from][msg.sender] &&
+            !allowance[from][msg.sender][_id]
+        ) {
             revert Unauthorized();
         }
         idToTokenData[_id].owner = _to;
@@ -211,7 +286,11 @@ contract ParallelToken is IParallelToken {
         return true;
     }
 
-    function pullMany(uint256[] calldata _id, address[] calldata _to, bytes[] calldata _memo) public returns (bool) {
+    function pullMany(
+        uint256[] calldata _id,
+        address[] calldata _to,
+        bytes[] calldata _memo
+    ) public returns (bool) {
         uint256 length = _id.length;
         if (length == 0) {
             revert InvalidLength();
@@ -224,20 +303,37 @@ contract ParallelToken is IParallelToken {
             address currentAddress = _to[i];
             address from = idToTokenData[currentId].owner;
             require(currentAddress != address(0));
-            require(from == msg.sender || isOperator[from][msg.sender] || allowance[from][msg.sender][currentId]);
+            require(
+                from == msg.sender ||
+                    isOperator[from][msg.sender] ||
+                    allowance[from][msg.sender][currentId]
+            );
             idToTokenData[currentId].owner = currentAddress;
-            emit Transfer(msg.sender, from, currentAddress, currentId, _memo[i]);
+            emit Transfer(
+                msg.sender,
+                from,
+                currentAddress,
+                currentId,
+                _memo[i]
+            );
         }
         return true;
     }
 
-    function setApproval(address _spender, uint256 _id, bool _approve) public returns (bool) {
+    function setApproval(
+        address _spender,
+        uint256 _id,
+        bool _approve
+    ) public returns (bool) {
         allowance[msg.sender][_spender][_id] = _approve;
         emit Approval(msg.sender, _spender, _id, _approve);
         return true;
     }
 
-    function setOperator(address _spender, bool _approve) public returns (bool) {
+    function setOperator(
+        address _spender,
+        bool _approve
+    ) public returns (bool) {
         isOperator[msg.sender][_spender] = _approve;
         emit OperatorSet(msg.sender, _spender, _approve);
         return true;

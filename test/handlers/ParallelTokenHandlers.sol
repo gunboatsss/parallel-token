@@ -100,7 +100,7 @@ contract ParallelTokenHandler is Test {
         uint256 id = tokenIds[tokenIdSeed % tokenIds.length];
         address actor = actors(actorSeed);
 
-        (,, uint256 amount) = pt.idToTokenData(id);
+        (,, uint256 amount) = pt.tokenData(id);
         if (amount == 0) return;
 
         vm.startPrank(actor);
@@ -126,7 +126,7 @@ contract ParallelTokenHandler is Test {
         if (tokenIds.length == 0) return;
 
         uint256 id = tokenIds[tokenIdSeed % tokenIds.length];
-        (, address from,) = pt.idToTokenData(id);
+        (, address from,) = pt.tokenData(id);
         if (from == address(0)) return;
 
         address to = actors(actorSeed + 1);
@@ -141,7 +141,7 @@ contract ParallelTokenHandler is Test {
 
         uint256 id1 = tokenIds[tokenIdSeed % tokenIds.length];
         uint256 id2 = tokenIds[(tokenIdSeed + 1) % tokenIds.length];
-        (, address owner2,) = pt.idToTokenData(id2);
+        (, address owner2,) = pt.tokenData(id2);
         if (owner2 == address(0)) return;
 
         address actor = actors(actorSeed);
@@ -158,7 +158,7 @@ contract ParallelTokenHandler is Test {
         if (tokenIds.length == 0) return;
 
         uint256 id = tokenIds[tokenIdSeed % tokenIds.length];
-        (, address owner,) = pt.idToTokenData(id);
+        (, address owner,) = pt.tokenData(id);
         if (owner == address(0)) return;
 
         address actor = actors(actorSeed);

@@ -2,7 +2,7 @@
 pragma solidity 0.8.33;
 
 import {UniswapV2ERC20} from "./UniswapV2ERC20.sol";
-import {IParallelToken} from "./interfaces/IParallelToken.sol";
+import {IParallelToken} from "src/interfaces/IParallelToken.sol";
 import {IParallelTokenFactory} from "./interfaces/IParallelTokenFactory.sol";
 import {Math} from "./libraries/Math.sol";
 import {UQ112x112} from "./libraries/UQ112x112.sol";
@@ -114,9 +114,9 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         uint256 nonce = pt.nonces(address(this));
         for (uint256 i = 1; i <= nonce + 100; i++) {
             uint256 checkId = uint256(keccak256(abi.encode(address(this), i)));
-            try pt.idToTokenData(checkId) returns (IParallelToken.TokenData memory data) {
-                if (data.underlyingERC20 == underlying && data.owner == address(this) && data.amount >= neededAmount) {
-                    return (checkId, data.amount);
+            try pt.tokenData(checkId) returns (address checkUnderlying, address checkOwner, uint256 checkAmount) {
+                if (checkUnderlying == underlying && checkOwner == address(this) && checkAmount >= neededAmount) {
+                    return (checkId, checkAmount);
                 }
             } catch {
                 break;
@@ -139,15 +139,15 @@ contract ParallelTokenPair is UniswapV2ERC20 {
 
         for (uint256 i; i < length; i++) {
             uint256 id = ids[i];
-            IParallelToken.TokenData memory tokenData = pt.idToTokenData(id);
+            (address tokenUnderlying, , uint256 tokenAmount) = pt.tokenData(id);
 
-            if (tokenData.underlyingERC20 == token0) {
-                amount0 += tokenData.amount;
+            if (tokenUnderlying == token0) {
+                amount0 += tokenAmount;
                 if (position0Id == 0) {
                     position0Id = id;
                 }
-            } else if (tokenData.underlyingERC20 == token1) {
-                amount1 += tokenData.amount;
+            } else if (tokenUnderlying == token1) {
+                amount1 += tokenAmount;
                 if (position1Id == 0) {
                     position1Id = id;
                 }
@@ -193,9 +193,9 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         newIds = new uint256[](2);
 
         if (amount0 > 0 && position0Id != 0) {
-            IParallelToken.TokenData memory data = pt.idToTokenData(position0Id);
-            require(data.amount >= amount0, "ParallelTokenPair: INSUFFICIENT_BALANCE");
-            uint256 remainder = data.amount - amount0;
+            (, , uint256 positionAmount0) = pt.tokenData(position0Id);
+            require(positionAmount0 >= amount0, "ParallelTokenPair: INSUFFICIENT_BALANCE");
+            uint256 remainder = positionAmount0 - amount0;
             if (remainder == 0) {
                 pt.push(position0Id, to);
                 newIds[0] = position0Id;
@@ -212,9 +212,9 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         }
 
         if (amount1 > 0 && position1Id != 0) {
-            IParallelToken.TokenData memory data = pt.idToTokenData(position1Id);
-            require(data.amount >= amount1, "ParallelTokenPair: INSUFFICIENT_BALANCE");
-            uint256 remainder = data.amount - amount1;
+            (, , uint256 positionAmount1) = pt.tokenData(position1Id);
+            require(positionAmount1 >= amount1, "ParallelTokenPair: INSUFFICIENT_BALANCE");
+            uint256 remainder = positionAmount1 - amount1;
             if (remainder == 0) {
                 pt.push(position1Id, to);
                 newIds[1] = position1Id;
@@ -250,11 +250,11 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         uint256 amount1In;
 
         if (amount0Out > 0) {
-            IParallelToken.TokenData memory data = pt.idToTokenData(position1Id);
-            require(data.amount >= amount0Out, "ParallelTokenPair: INSUFFICIENT_BALANCE");
+            (, , uint256 swapAmount1) = pt.tokenData(position1Id);
+            require(swapAmount1 >= amount0Out, "ParallelTokenPair: INSUFFICIENT_BALANCE");
             uint256[] memory splitAmounts = new uint256[](2);
             splitAmounts[0] = amount0Out;
-            splitAmounts[1] = data.amount - amount0Out;
+            splitAmounts[1] = swapAmount1 - amount0Out;
             uint256[] memory newId1 = pt.split(position1Id, splitAmounts);
             pt.push(newId1[0], to);
             position1Id = newId1[1];
@@ -262,11 +262,11 @@ contract ParallelTokenPair is UniswapV2ERC20 {
         }
 
         if (amount1Out > 0) {
-            IParallelToken.TokenData memory data = pt.idToTokenData(position0Id);
-            require(data.amount >= amount1Out, "ParallelTokenPair: INSUFFICIENT_BALANCE");
+            (, , uint256 swapAmount0) = pt.tokenData(position0Id);
+            require(swapAmount0 >= amount1Out, "ParallelTokenPair: INSUFFICIENT_BALANCE");
             uint256[] memory splitAmounts = new uint256[](2);
             splitAmounts[0] = amount1Out;
-            splitAmounts[1] = data.amount - amount1Out;
+            splitAmounts[1] = swapAmount0 - amount1Out;
             uint256[] memory newId0 = pt.split(position0Id, splitAmounts);
             pt.push(newId0[0], to);
             position0Id = newId0[1];
@@ -275,8 +275,14 @@ contract ParallelTokenPair is UniswapV2ERC20 {
 
         require(amount0In > 0 || amount1In > 0, "ParallelTokenPair: INSUFFICIENT_INPUT_AMOUNT");
 
-        uint256 balance0After = position0Id != 0 ? pt.idToTokenData(position0Id).amount : 0;
-        uint256 balance1After = position1Id != 0 ? pt.idToTokenData(position1Id).amount : 0;
+        uint256 balance0After;
+        uint256 balance1After;
+        if (position0Id != 0) {
+            (, , balance0After) = pt.tokenData(position0Id);
+        }
+        if (position1Id != 0) {
+            (, , balance1After) = pt.tokenData(position1Id);
+        }
 
         uint256 balance0Adjusted = balance0After * 1000 - amount0In * 3;
         uint256 balance1Adjusted = balance1After * 1000 - amount1In * 3;

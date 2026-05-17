@@ -56,7 +56,7 @@ contract ParallelTokenTest is Test {
 
         uint256 id = pt.mint(address(tokenA), 1e18);
 
-        (address underlying, address owner, uint256 amount) = pt.idToTokenData(id);
+        (address underlying, address owner, uint256 amount) = pt.tokenData(id);
         assertEq(tokenA.balanceOf(address(pt)) - balanceBefore, 1e18);
         assertEq(owner, adam);
         assertEq(amount, 1e18);
@@ -81,7 +81,7 @@ contract ParallelTokenTest is Test {
         assertEq(tokenA.balanceOf(address(pt)) - balanceBefore, 6e18);
         assertEq(pt.nonces(adam), nonceBefore + 4);
         for (uint256 i; i < ids.length; i++) {
-            (address underlying, address owner, uint256 amount) = pt.idToTokenData(ids[i]);
+            (address underlying, address owner, uint256 amount) = pt.tokenData(ids[i]);
             assertEq(owner, adam);
             assertEq(amount, amounts[i]);
             assertEq(underlying, address(tokenA));
@@ -97,7 +97,7 @@ contract ParallelTokenTest is Test {
         uint256 balanceBefore = tokenA.balanceOf(adam);
         pt.burn(id);
 
-        (address underlying, address owner, uint256 amount) = pt.idToTokenData(id);
+        (address underlying, address owner, uint256 amount) = pt.tokenData(id);
         assertEq(tokenA.balanceOf(adam) - balanceBefore, 1e18);
         assertEq(underlying, address(0));
         assertEq(owner, address(0));
@@ -119,7 +119,7 @@ contract ParallelTokenTest is Test {
 
         assertEq(tokenA.balanceOf(adam) - balanceBefore, 6e18);
         for (uint256 i; i < ids.length; i++) {
-            (address underlying, address owner, uint256 amount) = pt.idToTokenData(ids[i]);
+            (address underlying, address owner, uint256 amount) = pt.tokenData(ids[i]);
             assertEq(underlying, address(0));
             assertEq(owner, address(0));
             assertEq(amount, 0);
@@ -149,7 +149,7 @@ contract ParallelTokenTest is Test {
         bool success = pt.push(id, bob);
 
         assertTrue(success);
-        (, address owner,) = pt.idToTokenData(id);
+        (, address owner,) = pt.tokenData(id);
         assertEq(owner, bob);
         vm.stopPrank();
     }
@@ -167,8 +167,8 @@ contract ParallelTokenTest is Test {
         tos[1] = adam;
         pt.pushMany(ids, tos);
 
-        (, address owner0,) = pt.idToTokenData(ids[0]);
-        (, address owner1,) = pt.idToTokenData(ids[1]);
+        (, address owner0,) = pt.tokenData(ids[0]);
+        (, address owner1,) = pt.tokenData(ids[1]);
         assertEq(owner0, bob);
         assertEq(owner1, adam);
         vm.stopPrank();
@@ -216,7 +216,7 @@ contract ParallelTokenTest is Test {
         vm.expectEmit(address(pt));
         emit IParallelToken.Transfer(adam, adam, bob, id, "hello memo");
         pt.push(id, bob, "hello memo");
-        (, address owner,) = pt.idToTokenData(id);
+        (, address owner,) = pt.tokenData(id);
         assertEq(owner, bob);
         vm.stopPrank();
     }
@@ -241,8 +241,8 @@ contract ParallelTokenTest is Test {
         emit IParallelToken.Transfer(adam, adam, bob, ids[0], "memo for bob");
         pt.pushMany(ids, tos, memos);
 
-        (, address owner0,) = pt.idToTokenData(ids[0]);
-        (, address owner1,) = pt.idToTokenData(ids[1]);
+        (, address owner0,) = pt.tokenData(ids[0]);
+        (, address owner1,) = pt.tokenData(ids[1]);
         assertEq(owner0, bob);
         assertEq(owner1, adam);
         vm.stopPrank();
@@ -255,7 +255,7 @@ contract ParallelTokenTest is Test {
 
         pt.pull(id, bob, "");
 
-        (, address owner,) = pt.idToTokenData(id);
+        (, address owner,) = pt.tokenData(id);
         assertEq(owner, bob);
         vm.stopPrank();
     }
@@ -270,7 +270,7 @@ contract ParallelTokenTest is Test {
         vm.startPrank(bob);
         pt.pull(id, bob, "");
 
-        (, address owner,) = pt.idToTokenData(id);
+        (, address owner,) = pt.tokenData(id);
         assertEq(owner, bob);
         vm.stopPrank();
     }
@@ -285,7 +285,7 @@ contract ParallelTokenTest is Test {
         vm.startPrank(bob);
         pt.pull(id, bob, "");
 
-        (, address owner,) = pt.idToTokenData(id);
+        (, address owner,) = pt.tokenData(id);
         assertEq(owner, bob);
         vm.stopPrank();
     }
@@ -331,8 +331,8 @@ contract ParallelTokenTest is Test {
         memos[1] = "def";
         pt.pullMany(ids, tos, memos);
 
-        (, address owner0,) = pt.idToTokenData(ids[0]);
-        (, address owner1,) = pt.idToTokenData(ids[1]);
+        (, address owner0,) = pt.tokenData(ids[0]);
+        (, address owner1,) = pt.tokenData(ids[1]);
         assertEq(owner0, bob);
         assertEq(owner1, bob);
         vm.stopPrank();
@@ -352,12 +352,12 @@ contract ParallelTokenTest is Test {
         mergeIds[0] = ids[0];
         mergeIds[1] = ids[1];
 
-        (,, uint256 amountBefore) = pt.idToTokenData(toId);
+        (,, uint256 amountBefore) = pt.tokenData(toId);
         pt.merge(mergeIds, toId);
 
-        (,, uint256 amountAfter) = pt.idToTokenData(toId);
+        (,, uint256 amountAfter) = pt.tokenData(toId);
         assertEq(amountAfter, amountBefore + 2e18);
-        (, address owner0,) = pt.idToTokenData(ids[0]);
+        (, address owner0,) = pt.tokenData(ids[0]);
         assertEq(owner0, address(0));
         vm.stopPrank();
     }
@@ -387,10 +387,10 @@ contract ParallelTokenTest is Test {
         splitAmounts[1] = 6e17;
         uint256[] memory newIds = pt.split(id, splitAmounts);
 
-        (, address owner0,) = pt.idToTokenData(newIds[0]);
-        (, address owner1,) = pt.idToTokenData(newIds[1]);
-        (,, uint256 amount0) = pt.idToTokenData(newIds[0]);
-        (,, uint256 amount1) = pt.idToTokenData(newIds[1]);
+        (, address owner0,) = pt.tokenData(newIds[0]);
+        (, address owner1,) = pt.tokenData(newIds[1]);
+        (,, uint256 amount0) = pt.tokenData(newIds[0]);
+        (,, uint256 amount1) = pt.tokenData(newIds[1]);
         assertEq(owner0, adam);
         assertEq(owner1, adam);
         assertEq(amount0, 4e17);
