@@ -36,10 +36,16 @@ contract ParallelToken is IParallelToken {
             revert Collusion();
         }
 
+        uint256 balanceBefore = SafeTransferLib.balanceOf(_underlying, address(this));
+        SafeTransferLib.safeTransferFrom(_underlying, msg.sender, address(this), _amount);
+        uint256 balanceAfter = SafeTransferLib.balanceOf(_underlying, address(this));
+        if (balanceAfter - balanceBefore != _amount) {
+            revert FeeOnTransferToken();
+        }
+
         idToTokenData[newId] = TokenData({underlyingERC20: _underlying, owner: msg.sender, amount: _amount});
         nonces[msg.sender] = nonce;
         emit Mint(newId, msg.sender, _amount);
-        SafeTransferLib.safeTransferFrom(_underlying, msg.sender, address(this), _amount);
     }
 
     function mintMany(address _underlying, uint256[] calldata _amount) public returns (uint256[] memory newId) {
@@ -65,7 +71,12 @@ contract ParallelToken is IParallelToken {
             nonce += 1;
         }
         nonces[msg.sender] = nonce;
+        uint256 balanceBefore = SafeTransferLib.balanceOf(_underlying, address(this));
         SafeTransferLib.safeTransferFrom(_underlying, msg.sender, address(this), totalDebit);
+        uint256 balanceAfter = SafeTransferLib.balanceOf(_underlying, address(this));
+        if (balanceAfter - balanceBefore != totalDebit) {
+            revert FeeOnTransferToken();
+        }
     }
 
     function burn(uint256 _id) public returns (uint256 redeemed) {
